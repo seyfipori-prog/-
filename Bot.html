@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --head-color:#ff8a00; --body-color:#f4f5f7; --glow-color:#ff9d00; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; width:100%; height:100%; background:transparent; overflow:hidden; font-family:system-ui,sans-serif; }
+  #stage { width:100%; height:100%; display:grid; place-items:center; }
+  .bot { width:min(82vw,360px); display:flex; flex-direction:column; align-items:center; filter:drop-shadow(0 12px 18px #0002); transform-origin:center bottom; }
+  .head { position:relative; width:76%; aspect-ratio:1/0.82; border-radius:25% 25% 23% 23%; padding:10px; background:var(--head-color); box-shadow:0 0 22px color-mix(in srgb,var(--head-color),transparent 50%), inset 0 0 0 5px #ffffffb8; }
+  .head:before { content:""; position:absolute; inset:9px; border-radius:22%; border:5px solid #fff; pointer-events:none; }
+  .screen { position:absolute; inset:20px; border-radius:19%; background:linear-gradient(145deg,#202126,#08090d); border:2px solid #4d4d52; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; overflow:hidden; }
+  .eyes { display:flex; justify-content:center; gap:34px; width:100%; }
+  .eye { width:22px; height:22px; border-radius:50%; background:#fff; box-shadow:0 0 12px #fff9; transition:height .15s, transform .15s; }
+  .mouth { width:34px; height:8px; background:var(--glow-color); border-radius:3px; box-shadow:0 0 9px color-mix(in srgb,var(--glow-color),transparent 30%); transition:all .12s ease; }
+  .bot[data-expression="happy"] .mouth { width:38px; height:17px; border-radius:4px 4px 50% 50%; }
+  .bot[data-expression="surprised"] .mouth { width:18px; height:18px; border:4px solid var(--glow-color); background:transparent; border-radius:50%; }
+  .bot[data-expression="sad"] .mouth { width:35px; height:12px; border-radius:50% 50% 2px 2px; transform:translateY(5px); }
+  .bot[data-expression="wink"] .eye:first-child { height:4px; border-radius:5px; transform:translateY(9px); }
+  .bot[data-expression="sleepy"] .eye { height:5px; border-radius:5px; transform:translateY(8px); }
+  .bot.speaking .mouth { animation:talk .22s infinite alternate ease-in-out; }
+  .bot.speaking[data-expression="surprised"] .mouth { animation:talk-round .22s infinite alternate ease-in-out; }
+  @keyframes talk { from { height:4px; width:25px; border-radius:3px; } to { height:22px; width:34px; border-radius:4px 4px 50% 50%; } }
+  @keyframes talk-round { from { transform:scale(.7); } to { transform:scale(1.15); } }
+  .side { position:absolute; top:30%; width:16px; height:35px; border-radius:9px; background:#e8e9ec; border:3px solid #fff; }
+  .side.left { left:-9px; } .side.right { right:-9px; }
+  .neck { width:17%; height:12px; background:#d7d8dc; border-radius:0 0 6px 6px; }
+  .body { width:68%; height:105px; background:var(--body-color); border-radius:18px 18px 23px 23px; border:2px solid #fff; box-shadow:inset 0 0 0 2px #d9dbe0, inset 0 -9px 12px #0000000b; position:relative; transition:background .2s,border-color .2s; }
+  .body:after { content:""; position:absolute; inset:12px 13px; border:1px solid #d6d8dd; border-radius:12px; }
+  .bot[data-expression="thinking"] .head { animation:think 1.4s ease-in-out infinite alternate; }
+  @keyframes think { to { transform:rotate(3deg) translateY(-3px); } }
+  @media (max-width:420px) { .bot { width:min(86vw,300px); } .body { height:85px; } .screen { inset:17px; gap:17px; } .eye { width:18px;height:18px; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bot" id="bot" data-expression="neutral" role="img" aria-label="Animated robot mascot">
+    <div class="head">
+      <span class="side left"></span><span class="side right"></span>
+      <div class="screen"><div class="eyes"><span class="eye"></span><span class="eye"></span></div><div class="mouth" id="mouth"></div></div>
+    </div>
+    <div class="neck"></div><div class="body"></div>
+  </div>
+</div>
+<script>
+(() => {
+  const bot = document.getElementById('bot');
+  const root = document.documentElement;
+  let speakingTimer = null;
+  function setExpression(name) {
+    const valid = ['neutral','happy','surprised','sad','wink','sleepy','thinking'];
+    bot.dataset.expression = valid.includes(name) ? name : 'neutral';
+  }
+  function setColors(head, body) {
+    if (head) root.style.setProperty('--head-color', head);
+    if (body) root.style.setProperty('--body-color', body);
+  }
+  function startSpeaking(duration=0) {
+    bot.classList.add('speaking');
+    clearTimeout(speakingTimer);
+    if (duration > 0) speakingTimer = setTimeout(stopSpeaking, duration);
+  }
+  function stopSpeaking() { bot.classList.remove('speaking'); clearTimeout(speakingTimer); }
+  function speak(text, options={}) {
+    if (!('speechSynthesis' in window) || !text) { startSpeaking(options.duration || 1800); return; }
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    if (options.lang) utterance.lang = options.lang;
+    if (options.rate) utterance.rate = options.rate;
+    utterance.onstart = () => startSpeaking();
+    utterance.onend = utterance.onerror = () => stopSpeaking();
+    window.speechSynthesis.speak(utterance);
+  }
+  window.addEventListener('message', event => {
+    const data = event.data || {};
+    if (data.type !== 'BOT_CONTROL') return;
+    if (data.action === 'expression') setExpression(data.value);
+    if (data.action === 'colors') setColors(data.head, data.body);
+    if (data.action === 'startSpeaking') startSpeaking(data.duration || 0);
+    if (data.action === 'stopSpeaking') stopSpeaking();
+    if (data.action === 'speak') speak(data.text, data.options || {});
+  });
+  // Query-string defaults: Bot.html?head=%23ff8a00&body=%23f4f5f7&expression=happy
+  const params = new URLSearchParams(location.search);
+  setColors(params.get('head'), params.get('body'));
+  if (params.get('expression')) setExpression(params.get('expression'));
+  window.parent.postMessage({type:'BOT_READY'}, '*');
+})();
+</script>
+</body>
+</html>

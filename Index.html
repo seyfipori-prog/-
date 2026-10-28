@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>نمونه اتصال ربات به سایت</title>
+<style>
+  body { margin:0; min-height:100vh; background:#f1f1f1; color:#171717; font-family:Tahoma,Arial,sans-serif; }
+  main { max-width:980px; margin:auto; padding:32px 18px; text-align:center; }
+  .preview { width:min(100%,430px); height:440px; margin:10px auto 20px; border:0; display:block; }
+  .controls { display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin:12px auto; }
+  button { border:0; border-radius:9px; padding:11px 15px; background:#ff8500; color:#111; font-weight:bold; cursor:pointer; }
+  label { display:inline-flex; align-items:center; gap:8px; background:white; padding:9px 12px; border-radius:9px; }
+  input[type=color] { width:36px; height:28px; border:0; background:transparent; }
+  input[type=text] { padding:10px; border:1px solid #ccc; border-radius:8px; min-width:220px; }
+  .hint { color:#555; line-height:1.8; font-size:14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ربات سایت</h1>
+  <p>نمونه آزمایشی: تغییر رنگ، حالت چهره و حرکت دهان هنگام صحبت</p>
+  <iframe class="preview" id="botFrame" src="Bot.html" title="ربات سایت" allow="autoplay"></iframe>
+  <div class="controls">
+    <label>رنگ دور سر <input id="headColor" type="color" value="#ff8500"></label>
+    <label>رنگ بدنه <input id="bodyColor" type="color" value="#f4f5f7"></label>
+    <button onclick="applyColors()">اعمال رنگ</button>
+  </div>
+  <div class="controls">
+    <button onclick="expression('neutral')">عادی</button>
+    <button onclick="expression('happy')">خوشحال</button>
+    <button onclick="expression('surprised')">متعجب</button>
+    <button onclick="expression('thinking')">فکر کردن</button>
+    <button onclick="expression('wink')">چشمک</button>
+    <button onclick="expression('sad')">ناراحت</button>
+  </div>
+  <div class="controls">
+    <input id="speechText" type="text" value="سلام! من ربات سایت هستم." aria-label="متن صحبت">
+    <button onclick="speakText()">صحبت کن</button>
+    <button onclick="startMouth()">حرکت دهان</button>
+    <button onclick="stopMouth()">توقف دهان</button>
+  </div>
+  <p class="hint">این صفحه فقط نمونه اتصال است. فایل Bot.html را کنار Index.html نگه دار. برای GitHub Pages هم هر دو فایل باید در همان پوشه منتشر شوند.</p>
+</main>
+<script>
+  const frame = document.getElementById('botFrame');
+  function send(action, extra={}) {
+    frame.contentWindow.postMessage({type:'BOT_CONTROL', action, ...extra}, '*');
+  }
+  function applyColors() {
+    send('colors', {
+      head: document.getElementById('headColor').value,
+      body: document.getElementById('bodyColor').value
+    });
+  }
+  function expression(value) { send('expression', {value}); }
+  function speakText() { send('speak', {text:document.getElementById('speechText').value, options:{lang:'fa-IR'}}); }
+  function startMouth() { send('startSpeaking', {duration:0}); }
+  function stopMouth() { send('stopSpeaking'); }
+</script>
+</body>
+</html>
